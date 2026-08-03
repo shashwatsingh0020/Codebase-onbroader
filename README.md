@@ -1,2 +1,1 @@
-# Codebase-onbroader
-An AI tool  which helps to understand the github repos 
+Codebase OnBroader is an AI-based system that helps developers quickly understand large and complex codebases. It analyzes project files, structure, and logic to generate simple, human-readable explanations. The platform enables users to explore workflows, functions, and dependencies without manually reading thousands of lines of code. It improves onboarding speed and makes collaboration easier for teams and students.
