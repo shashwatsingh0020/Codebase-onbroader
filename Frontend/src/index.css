@@ -1,1 +1,17 @@
 @import "tailwindcss";
+
+@theme {
+  --color-gold-200: #fef08a;
+  --color-gold-300: #fde047;
+  --color-gold-400: #eab308;
+  --color-gold-500: #ca8a04;
+  --color-gold-600: #a16207;
+  
+  --color-ink-900: #1a1d24;
+  --color-ink-950: #0d0f14;
+  --color-panel: #1a1d24;
+  --color-slate-350: #8892b0;
+
+  --font-display: "Outfit", "Inter", system-ui, sans-serif;
+}
+
