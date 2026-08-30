@@ -1,3 +1,4 @@
+
  import { Route, Routes } from "react-router-dom";
 import BackgroundGlow from "./components/BackgroundGlow.jsx";
 import Navbar from "./components/Navbar.jsx";
@@ -25,3 +26,4 @@ export default function App() {
     </div>
   );
 }
+
