@@ -2,23 +2,34 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Eye, EyeOff, Lock, Mail } from "lucide-react";
 import AuthCard from "../components/AuthCard.jsx";
+import { useAuth } from "../context/AuthContext.jsx";
 
 export default function Login() {
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [form, setForm] = useState({ email: "", password: "" });
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.email || !form.password) {
       setError("Enter your email and password to continue.");
       return;
     }
     setError("");
-    // Replace with a real auth call, e.g. POST /api/login
-    navigate("/");
+    setLoading(true);
+
+    try {
+      await login(form.email, form.password);
+      navigate("/dashboard");
+    } catch (err) {
+      setError(err.message || "Unable to connect to the authentication server.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -92,9 +103,10 @@ export default function Login() {
 
         <button
           type="submit"
-          className="w-full rounded-lg bg-gradient-to-r from-gold-400 to-gold-300 px-4 py-2.5 text-sm font-bold text-ink-950 transition-transform hover:scale-[1.01]"
+          disabled={loading}
+          className="w-full rounded-lg bg-gradient-to-r from-gold-400 to-gold-300 px-4 py-2.5 text-sm font-bold text-ink-950 transition-transform hover:scale-[1.01] disabled:opacity-60 disabled:hover:scale-100"
         >
-          Log in
+          {loading ? "Logging in..." : "Log in"}
         </button>
       </form>
     </AuthCard>

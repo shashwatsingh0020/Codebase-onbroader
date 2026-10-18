@@ -47,10 +47,6 @@ export default function Home() {
           <RepoInputForm onAnalyzeComplete={handleAnalyzeComplete} />
           {analyzedUrl && <AnalysisResult url={analyzedUrl} />}
         </div>
-
-        {/* <p className="mt-4 text-xs text-slate-500">
-          Works with any public repository. No install required.
-        </p> */}
       </section>
 
       {/* Highlights (hide if analyzed) */}

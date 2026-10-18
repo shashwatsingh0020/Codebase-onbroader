@@ -2,30 +2,39 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Eye, EyeOff, Lock, Mail, User } from "lucide-react";
 import AuthCard from "../components/AuthCard.jsx";
+import { useAuth } from "../context/AuthContext.jsx";
 
 export default function Signup() {
   const navigate = useNavigate();
+  const { signup } = useAuth();
   const [form, setForm] = useState({ name: "", email: "", password: "" });
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
-
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.name || !form.email || !form.password) {
       setError("Fill in every field to create your account.");
       return;
     }
-    if (form.password.length < 8) {
-      setError("Password must be at least 8 characters.");
+    if (form.password.length < 6) {
+      setError("Password must be at least 6 characters.");
       return;
     }
     setError("");
-    // Replace with a real auth call, e.g. POST /api/signup
-    navigate("/");
-  };
+    setLoading(true);
 
+    try {
+      await signup(form.name, form.email, form.password);
+      navigate("/dashboard");
+    } catch (err) {
+      setError(err.message || "Unable to connect to the authentication server.");
+    } finally {
+      setLoading(false);
+    }
+  };
   return (
     <AuthCard
       eyebrow="Get started"
@@ -40,7 +49,7 @@ export default function Signup() {
         </>
       }
     >
-      <form onSubmit={handleSubmit} className="space-y-4">
+     <form onSubmit={handleSubmit} className="space-y-4">
         {error && (
           <p role="alert" className="rounded-lg border border-red-400/30 bg-red-400/10 px-3.5 py-2 text-sm text-red-300">
             {error}
@@ -64,7 +73,6 @@ export default function Signup() {
             />
           </div>
         </div>
-
         <div>
           <label htmlFor="email" className="mb-1.5 block text-xs font-medium text-slate-350">
             Email
@@ -82,7 +90,6 @@ export default function Signup() {
             />
           </div>
         </div>
-
         <div>
           <label htmlFor="password" className="mb-1.5 block text-xs font-medium text-slate-350">
             Password
@@ -108,14 +115,13 @@ export default function Signup() {
             </button>
           </div>
         </div>
-
         <button
           type="submit"
-          className="w-full rounded-lg bg-gradient-to-r from-gold-400 to-gold-300 px-4 py-2.5 text-sm font-bold text-ink-950 transition-transform hover:scale-[1.01]"
+          disabled={loading}
+          className="w-full rounded-lg bg-gradient-to-r from-gold-400 to-gold-300 px-4 py-2.5 text-sm font-bold text-ink-950 transition-transform hover:scale-[1.01] disabled:opacity-60 disabled:hover:scale-100"
         >
-          Create account
+          {loading ? "Creating account..." : "Create account"}
         </button>
-
         <p className="text-center text-xs text-slate-500">
           By signing up you agree to our Terms and Privacy Policy.
         </p>
