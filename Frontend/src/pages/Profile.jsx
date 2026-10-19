@@ -113,7 +113,7 @@ export default function Profile() {
             </p>
           </div>
 
-          {/* Session Security / WebToken */}
+          {/* Session Security / WebToken
           <div className="rounded-xl border border-white/5 bg-ink-950/50 p-4 sm:col-span-2">
             <span className="flex items-center gap-2 text-xs font-medium text-slate-400">
               <ShieldCheck size={14} className="text-green-400" /> Authentication Session (JWT)
@@ -125,8 +125,8 @@ export default function Profile() {
               <span className="inline-flex items-center gap-1.5 self-start text-[11px] font-mono text-gold-300">
                 <Key size={12} /> Token Valid
               </span>
-            </div>
-          </div>
+            </div> */}
+          {/* </div> */}
         </div>
 
         {/* Dedicated Logout Action Section */}

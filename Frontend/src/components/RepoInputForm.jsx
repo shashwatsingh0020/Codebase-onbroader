@@ -67,7 +67,7 @@ export default function RepoInputForm({ onAnalyzeComplete }) {
               setUrl(e.target.value);
               if (status === "error") setStatus("idle");
             }}
-            placeholder="https://github.com/owner/repo"
+            placeholder=""
             className="w-full bg-transparent font-mono text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none"
             aria-label="GitHub repository URL"
           />
