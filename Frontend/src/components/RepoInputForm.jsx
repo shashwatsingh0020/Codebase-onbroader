@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { ArrowRight, Loader2 } from "lucide-react";
+import { useAuth } from "../context/AuthContext.jsx";
 
-const GithubIcon = ({ size = 24, className = "" }) => (
+const GithubIcon = ({ size = 20, className = "" }) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     width={size}
@@ -18,37 +19,69 @@ const GithubIcon = ({ size = 24, className = "" }) => (
   </svg>
 );
 
-export default function RepoInputForm({ onAnalyzeComplete }) {
-  const [url, setUrl] = useState("");
+const API_BASE = "http://localhost:5000/api/analyze";
+
+export default function RepoInputForm({ onAnalyzeComplete, initialUrl = "" }) {
+  const { token } = useAuth();
+  const [url, setUrl] = useState(initialUrl);
   const [status, setStatus] = useState("idle"); // idle | loading | error
+  const [loadingStep, setLoadingStep] = useState("");
   const [error, setError] = useState("");
 
-  const isValidRepoUrl = (value) =>
-    /^https?:\/\/(www\.)?github\.com\/[\w.-]+\/[\w.-]+\/?$/.test(value.trim());
+  const isValidRepoUrl = (value) => {
+    const val = value.trim();
+    return (
+      /^https?:\/\/(www\.)?github\.com\/[\w.-]+\/[\w.-]+\/?$/i.test(val) ||
+      /^[\w.-]+\/[\w.-]+$/.test(val)
+    );
+  };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
+  const handleSubmit = async (e) => {
+    if (e) e.preventDefault();
 
     if (!url.trim()) {
-      setError("Paste a GitHub repo URL to continue.");
+      setError("Please paste a GitHub repo URL (e.g., https://github.com/expressjs/express)");
       setStatus("error");
       return;
     }
     if (!isValidRepoUrl(url)) {
-      setError("That doesn't look like a valid GitHub repo URL.");
+      setError("Please provide a valid GitHub repository URL or 'owner/repo' format.");
       setStatus("error");
       return;
     }
 
     setError("");
     setStatus("loading");
+    setLoadingStep("Fetching repository from GitHub & generating AI Project Summary...");
 
-    // Replace this with a real API call, e.g.:
-    // const res = await fetch("/api/analyze", { method: "POST", body: JSON.stringify({ url }) });
-    setTimeout(() => {
+    try {
+      const headers = { "Content-Type": "application/json" };
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+
+      const res = await fetch(`${API_BASE}/summary`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ url: url.trim() }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || "Failed to analyze repository.");
+      }
+
       setStatus("idle");
-      if (onAnalyzeComplete) onAnalyzeComplete(url);
-    }, 1800);
+      setLoadingStep("");
+      if (onAnalyzeComplete) {
+        onAnalyzeComplete(data);
+      }
+    } catch (err) {
+      console.error("Analysis request error:", err);
+      setStatus("error");
+      setError(err.message || "Server error while analyzing repository. Is the backend running?");
+    }
   };
 
   return (
@@ -59,7 +92,7 @@ export default function RepoInputForm({ onAnalyzeComplete }) {
         }`}
       >
         <div className="flex flex-1 items-center gap-3 px-3 py-2">
-          <GithubIcon size={18} className="shrink-0 text-slate-350" />
+          <GithubIcon size={18} className="shrink-0 text-slate-400" />
           <input
             type="text"
             value={url}
@@ -67,7 +100,7 @@ export default function RepoInputForm({ onAnalyzeComplete }) {
               setUrl(e.target.value);
               if (status === "error") setStatus("idle");
             }}
-            placeholder=""
+            placeholder="https://github.com/expressjs/express"
             className="w-full bg-transparent font-mono text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none"
             aria-label="GitHub repository URL"
           />
@@ -76,24 +109,31 @@ export default function RepoInputForm({ onAnalyzeComplete }) {
         <button
           type="submit"
           disabled={status === "loading"}
-          className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-gold-400 to-gold-300 px-6 py-3 text-sm font-bold text-ink-950 transition-transform hover:scale-[1.02] disabled:opacity-70 disabled:hover:scale-100"
+          className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-gold-400 to-gold-300 px-6 py-3 text-sm font-bold text-ink-950 transition-transform hover:scale-[1.02] disabled:opacity-70 disabled:hover:scale-100 cursor-pointer"
         >
           {status === "loading" ? (
             <>
               <Loader2 size={16} className="animate-spin" />
-              Analyzing
+              <span>Analyzing...</span>
             </>
           ) : (
             <>
-              Analyze
+              <span>Generate Summary</span>
               <ArrowRight size={16} />
             </>
           )}
         </button>
       </div>
 
+      {status === "loading" && (
+        <p className="mt-3 text-center text-xs text-gold-400 animate-pulse flex items-center justify-center gap-1.5">
+          <Loader2 size={13} className="animate-spin" />
+          {loadingStep}
+        </p>
+      )}
+
       {status === "error" && (
-        <p role="alert" className="mt-3 text-center text-sm text-red-400">
+        <p role="alert" className="mt-3 text-center text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg py-2 px-3">
           {error}
         </p>
       )}

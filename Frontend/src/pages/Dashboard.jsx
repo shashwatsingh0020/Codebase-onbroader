@@ -1,23 +1,65 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { 
-  GitBranch, 
-  FolderGit2, 
-  Sparkles, 
-  Clock, 
-  ExternalLink, 
-  User, 
-  CheckCircle2, 
-  ArrowRight 
+import { useState, useEffect } from "react";
+import { Link, useSearchParams } from "react-router-dom";
+import {
+  GitBranch,
+  FolderGit2,
+  Sparkles,
+  Clock,
+  ExternalLink,
+  CheckCircle2,
+  ArrowRight,
+  Trash2,
+  Star,
+  RefreshCw,
+  FolderOpen,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext.jsx";
 import RepoInputForm from "../components/RepoInputForm.jsx";
 import AnalysisResult from "../components/AnalysisResult.jsx";
 
+const API_BASE = "http://localhost:5000/api/analyze";
+
 export default function Dashboard() {
-  const { user } = useAuth();
-  const navigate = useNavigate();
-  const [analyzedUrl, setAnalyzedUrl] = useState(null);
+  const { user, token } = useAuth();
+  const [searchParams] = useSearchParams();
+  const initialRepoUrl = searchParams.get("repo") || "";
+
+  const [activeAnalysis, setActiveAnalysis] = useState(null);
+  const [savedRepos, setSavedRepos] = useState([]);
+  const [loadingHistory, setLoadingHistory] = useState(true);
+
+  // 1. Fetch user's saved analyses from MongoDB on mount
+  useEffect(() => {
+    const fetchHistory = async () => {
+      if (!token) {
+        setLoadingHistory(false);
+        return;
+      }
+      try {
+        const res = await fetch(`${API_BASE}/history`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && Array.isArray(data.history)) {
+            setSavedRepos(data.history);
+            // If we don't have an active analysis yet, display the latest one
+            if (!activeAnalysis && data.history.length > 0 && !initialRepoUrl) {
+              setActiveAnalysis(data.history[0]);
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load saved repositories:", err);
+      } finally {
+        setLoadingHistory(false);
+      }
+    };
+
+    fetchHistory();
+  }, [token]);
 
   // If not authenticated, prompt to login
   if (!user) {
@@ -48,8 +90,49 @@ export default function Dashboard() {
     );
   }
 
-  const handleAnalyzeComplete = (url) => {
-    setAnalyzedUrl(url);
+  // Handle newly analyzed repository
+  const handleAnalyzeComplete = (analysisData) => {
+    setActiveAnalysis(analysisData);
+
+    // Prepend to saved repositories list
+    setSavedRepos((prev) => {
+      const exists = prev.some(
+        (item) => item.repoUrl === analysisData.meta?.url || item._id === analysisData.analysisId
+      );
+      if (exists) {
+        return prev.map((item) =>
+          item.repoUrl === analysisData.meta?.url ? analysisData : item
+        );
+      }
+      return [analysisData, ...prev];
+    });
+
+    // Smooth scroll to results
+    window.scrollTo({ top: 380, behavior: "smooth" });
+  };
+
+  // Delete an analysis from history
+  const handleDelete = async (e, id) => {
+    e.stopPropagation();
+    if (!id || !token) return;
+
+    try {
+      const res = await fetch(`${API_BASE}/${id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (res.ok) {
+        setSavedRepos((prev) => prev.filter((item) => item._id !== id));
+        if (activeAnalysis?._id === id || activeAnalysis?.analysisId === id) {
+          setActiveAnalysis(null);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to delete analysis:", err);
+    }
   };
 
   return (
@@ -62,10 +145,14 @@ export default function Dashboard() {
             <span>Personal Workspace</span>
           </div>
           <h1 className="mt-1 font-display text-3xl font-extrabold text-white sm:text-4xl">
-            Welcome back, <span className="bg-gradient-to-r from-gold-300 to-gold-500 bg-clip-text text-transparent">{user.name.split(" ")[0]}</span> 👋
+            Welcome back,{" "}
+            <span className="bg-gradient-to-r from-gold-300 to-gold-500 bg-clip-text text-transparent">
+              {user.name.split(" ")[0]}
+            </span>{" "}
+            👋
           </h1>
           <p className="mt-1 text-sm text-slate-400">
-            Manage your analyzed repositories and generate instant onboarding guides.
+            Analyze any GitHub repository to instantly generate AI Project Summaries and guides.
           </p>
         </div>
 
@@ -87,85 +174,114 @@ export default function Dashboard() {
           Analyze a New Codebase
         </h2>
         <p className="mt-1 text-xs text-slate-400 sm:text-sm">
-          Enter any public GitHub repository URL to trace its architecture, key workflows, and starter tasks.
+          Enter any public GitHub repository URL to generate its comprehensive AI Project Summary.
         </p>
 
         <div className="mt-6 w-full flex flex-col items-center">
-          <RepoInputForm onAnalyzeComplete={handleAnalyzeComplete} />
-          {analyzedUrl && <AnalysisResult url={analyzedUrl} />}
+          <RepoInputForm
+            onAnalyzeComplete={handleAnalyzeComplete}
+            initialUrl={initialRepoUrl}
+          />
+
+          {/* Render Active Feature 1 Project Summary */}
+          {activeAnalysis && (
+            <AnalysisResult
+              data={activeAnalysis}
+              url={activeAnalysis?.meta?.url || activeAnalysis?.repoUrl}
+            />
+          )}
         </div>
       </section>
 
-      {/* Saved / Recent Repositories Grid */}
+      {/* Saved Repositories from MongoDB */}
       <section className="mt-16">
         <div className="flex items-center justify-between">
-          <h3 className="font-display text-lg font-bold text-white">Your Saved Repositories</h3>
-          <span className="text-xs text-slate-400">Saved in your account</span>
+          <div className="flex items-center gap-2">
+            <h3 className="font-display text-lg font-bold text-white">Your Saved Repositories</h3>
+            <span className="rounded-full bg-gold-400/10 px-2 py-0.5 text-xs font-semibold text-gold-300">
+              {savedRepos.length}
+            </span>
+          </div>
+          <span className="text-xs text-slate-400">Saved in your MongoDB account</span>
         </div>
 
-        <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {/* Card 1 */}
-          <div className="group rounded-2xl border border-white/5 bg-panel/60 p-5 transition-all duration-300 hover:-translate-y-1 hover:border-gold-500/30">
-            <div className="flex items-start justify-between">
-              <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-gold-500/10 text-gold-400">
-                <FolderGit2 size={18} />
-              </span>
-              <span className="flex items-center gap-1 rounded-full border border-green-500/20 bg-green-500/10 px-2 py-0.5 text-[10px] font-medium text-green-400">
-                <CheckCircle2 size={10} />
-                Ready
-              </span>
-            </div>
-            <h4 className="mt-4 font-mono text-sm font-semibold text-white group-hover:text-gold-300 transition-colors">
-              expressjs / express
-            </h4>
-            <p className="mt-1 text-xs text-slate-400 line-clamp-2">
-              Fast, unopinionated, minimalist web framework for Node.js.
-            </p>
-            <div className="mt-4 flex items-center justify-between border-t border-white/5 pt-3 text-[11px] text-slate-400">
-              <span className="flex items-center gap-1">
-                <GitBranch size={12} /> master
-              </span>
-              <span className="flex items-center gap-1">
-                <Clock size={12} /> Analyzed today
-              </span>
-            </div>
+        {loadingHistory ? (
+          <div className="mt-6 flex justify-center py-12 text-slate-400 text-sm">
+            <RefreshCw size={18} className="animate-spin text-gold-400 mr-2" />
+            Loading your saved analyses...
           </div>
+        ) : savedRepos.length === 0 ? (
+          <div className="mt-6 flex flex-col items-center justify-center rounded-2xl border border-dashed border-white/10 bg-panel/20 p-10 text-center">
+            <FolderOpen size={36} className="text-slate-500 mb-3" />
+            <p className="text-sm font-semibold text-slate-300">No saved repositories yet</p>
+            <p className="mt-1 text-xs text-slate-500 max-w-sm">
+              Enter any GitHub URL above to generate your first AI Project Summary. It will automatically save here so you can access it anytime!
+            </p>
+          </div>
+        ) : (
+          <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {savedRepos.map((item) => {
+              const fullName = item.meta?.fullName || item.repoUrl?.split("/").slice(-2).join("/") || item.repoName;
+              const headline = item.summary?.headline || item.meta?.description || "Project summary generated";
+              const language = item.meta?.language || "Code";
+              const stars = item.meta?.stars || 0;
+              const isSelected = activeAnalysis?.meta?.fullName === fullName || activeAnalysis?.repoUrl === item.repoUrl;
 
-          {/* Card 2 */}
-          <div className="group rounded-2xl border border-white/5 bg-panel/60 p-5 transition-all duration-300 hover:-translate-y-1 hover:border-gold-500/30">
-            <div className="flex items-start justify-between">
-              <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-purple-500/10 text-purple-400">
-                <FolderGit2 size={18} />
-              </span>
-              <span className="flex items-center gap-1 rounded-full border border-green-500/20 bg-green-500/10 px-2 py-0.5 text-[10px] font-medium text-green-400">
-                <CheckCircle2 size={10} />
-                Ready
-              </span>
-            </div>
-            <h4 className="mt-4 font-mono text-sm font-semibold text-white group-hover:text-gold-300 transition-colors">
-              facebook / react
-            </h4>
-            <p className="mt-1 text-xs text-slate-400 line-clamp-2">
-              The library for web and native user interfaces.
-            </p>
-            <div className="mt-4 flex items-center justify-between border-t border-white/5 pt-3 text-[11px] text-slate-400">
-              <span className="flex items-center gap-1">
-                <GitBranch size={12} /> main
-              </span>
-              <span className="flex items-center gap-1">
-                <Clock size={12} /> Analyzed recently
-              </span>
-            </div>
-          </div>
+              return (
+                <div
+                  key={item._id || item.analysisId || fullName}
+                  onClick={() => {
+                    setActiveAnalysis(item);
+                    window.scrollTo({ top: 380, behavior: "smooth" });
+                  }}
+                  className={`group relative cursor-pointer rounded-2xl border p-5 transition-all duration-300 hover:-translate-y-1 ${
+                    isSelected
+                      ? "border-gold-400 bg-panel/80 shadow-[0_0_25px_-5px_rgba(217,185,90,0.3)]"
+                      : "border-white/5 bg-panel/60 hover:border-gold-500/30"
+                  }`}
+                >
+                  <div className="flex items-start justify-between">
+                    <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-gold-500/10 text-gold-400">
+                      <FolderGit2 size={18} />
+                    </span>
 
-          {/* Empty / Add slot */}
-          <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-white/10 bg-panel/20 p-6 text-center">
-            <p className="text-xs font-semibold text-slate-350">Analyze more repositories</p>
-            <p className="mt-1 text-[11px] text-slate-500">
-              Every guide you generate is automatically saved to your account.
-            </p>
+                    <div className="flex items-center gap-2">
+                      <span className="flex items-center gap-1 rounded-full border border-green-500/20 bg-green-500/10 px-2 py-0.5 text-[10px] font-medium text-green-400">
+                        <CheckCircle2 size={10} />
+                        Summary Ready
+                      </span>
+                      {item._id && (
+                        <button
+                          onClick={(e) => handleDelete(e, item._id)}
+                          className="text-slate-500 hover:text-red-400 transition-colors p-1"
+                          title="Delete saved summary"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  <h4 className="mt-4 font-mono text-sm font-semibold text-white group-hover:text-gold-300 transition-colors line-clamp-1">
+                    {fullName}
+                  </h4>
+                  <p className="mt-1 text-xs text-slate-400 line-clamp-2 leading-relaxed">
+                    {headline}
+                  </p>
+
+                  <div className="mt-4 flex items-center justify-between border-t border-white/5 pt-3 text-[11px] text-slate-400">
+                    <span className="flex items-center gap-1">
+                      <GitBranch size={12} /> {language}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Star size={11} className="text-amber-400 fill-amber-400/20" /> {stars.toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
           </div>
-        </div>
+        )}
       </section>
     </main>
   );
