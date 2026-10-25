@@ -52,7 +52,7 @@ export default function RepoInputForm({ onAnalyzeComplete, initialUrl = "" }) {
 
     setError("");
     setStatus("loading");
-    setLoadingStep("Fetching repository from GitHub & generating AI Project Summary...");
+    setLoadingStep("Fetching repository from GitHub & analyzing Summary & Tech Stack...");
 
     try {
       const headers = { "Content-Type": "application/json" };

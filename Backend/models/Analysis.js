@@ -32,6 +32,7 @@ const analysisSchema = new mongoose.Schema(
       defaultBranch: String,
       license: String,
     },
+    // Feature 1: Project Summary
     summary: {
       headline: { type: String, required: true },
       overview: { type: String, required: true },
@@ -40,6 +41,30 @@ const analysisSchema = new mongoose.Schema(
       architectureHighlights: [{ type: String }],
       engine: String,
       note: String,
+    },
+    // Feature 2: Tech Stack Detection
+    techStack: {
+      languages: [
+        {
+          name: String,
+          bytes: Number,
+          percentage: Number,
+          color: String,
+        },
+      ],
+      detectedCount: Number,
+      architecture: String,
+      categorized: {
+        frameworks: [{ name: String, category: String, description: String }],
+        databases: [{ name: String, category: String, description: String }],
+        styling: [{ name: String, category: String, description: String }],
+        devops: [{ name: String, category: String, description: String }],
+        tools: [{ name: String, category: String, description: String }],
+      },
+      summary: String,
+      strengths: [String],
+      runtime: String,
+      engine: String,
     },
   },
   {

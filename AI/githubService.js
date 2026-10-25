@@ -75,6 +75,71 @@ async function fetchReadme(owner, repo, defaultBranch = "main") {
 }
 
 /**
+ * Fetch raw file from GitHub raw content
+ */
+async function fetchRawFile(owner, repo, filename, defaultBranch = "main") {
+  const branchesToTry = [defaultBranch, "main", "master"];
+
+  for (const branch of branchesToTry) {
+    try {
+      const rawUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${filename}`;
+      const res = await fetch(rawUrl, {
+        headers: { "User-Agent": "Codebase-Onboarder" },
+      });
+
+      if (res.ok) {
+        const text = await res.text();
+        if (text && text.trim().length > 0) {
+          return text;
+        }
+      }
+    } catch (err) {
+      // Continue trying next branch
+    }
+  }
+  return null;
+}
+
+/**
+ * Fetch language byte breakdown from GitHub API
+ */
+async function fetchLanguages(owner, repo, headers) {
+  try {
+    const apiUrl = `https://api.github.com/repos/${owner}/${repo}/languages`;
+    const res = await fetch(apiUrl, { headers });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch (err) {
+    // Languages API not available or rate limited
+  }
+  return null;
+}
+
+/**
+ * Fetch root directory contents to detect presence of configuration and docker files
+ */
+async function fetchRootContents(owner, repo, headers) {
+  try {
+    const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents`;
+    const res = await fetch(apiUrl, { headers });
+    if (res.ok) {
+      const items = await res.json();
+      if (Array.isArray(items)) {
+        return items.map((item) => ({
+          name: item.name,
+          path: item.path,
+          type: item.type, // "file" or "dir"
+        }));
+      }
+    }
+  } catch (err) {
+    // Continue
+  }
+  return [];
+}
+
+/**
  * Fetch package.json if it exists (for JS/TS apps)
  */
 async function fetchPackageJson(owner, repo, defaultBranch = "main") {
@@ -129,10 +194,15 @@ async function getRepoData(repoUrl, githubToken = null) {
   const data = await response.json();
   const defaultBranch = data.default_branch || "main";
 
-  // 2. Fetch README and package.json concurrently
-  const [readme, packageJson] = await Promise.all([
+  // 2. Fetch README, package.json, languages, and root contents concurrently
+  const [readme, packageJson, languages, rootContents, requirementsTxt, cargoToml, goMod] = await Promise.all([
     fetchReadme(owner, repo, defaultBranch),
     fetchPackageJson(owner, repo, defaultBranch),
+    fetchLanguages(owner, repo, headers),
+    fetchRootContents(owner, repo, headers),
+    fetchRawFile(owner, repo, "requirements.txt", defaultBranch),
+    fetchRawFile(owner, repo, "Cargo.toml", defaultBranch),
+    fetchRawFile(owner, repo, "go.mod", defaultBranch),
   ]);
 
   return {
@@ -148,6 +218,13 @@ async function getRepoData(repoUrl, githubToken = null) {
     defaultBranch,
     readme,
     packageJson,
+    languages: languages || (data.language ? { [data.language]: 100 } : {}),
+    rootContents: rootContents || [],
+    manifests: {
+      requirementsTxt,
+      cargoToml,
+      goMod,
+    },
     license: data.license ? data.license.name || data.license.spdx_id : null,
   };
 }

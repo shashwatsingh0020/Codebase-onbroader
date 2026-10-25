@@ -25,7 +25,6 @@ export default function App() {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/profile" element={<Profile />} />
       </Routes>
-
       <Footer />
     </div>
   );

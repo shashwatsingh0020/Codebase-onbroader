@@ -7,7 +7,7 @@ require("dotenv").config();
 
 // AI Engine and MongoDB Models
 const Analysis = require("./models/Analysis");
-const { analyzeProjectSummary } = require("../AI/index.js");
+const { analyzeProjectSummary, analyzeTechStack } = require("../AI/index.js");
 
 // ==============================================================================
 // 1. EXPRESS APP INITIALIZATION & MIDDLEWARES
@@ -313,6 +313,7 @@ app.post("/api/analyze/summary", optionalVerifyToken, async (req, res) => {
         owner: result.meta.owner,
         meta: result.meta,
         summary: result.summary,
+        techStack: result.techStack,
       });
     } catch (saveError) {
       console.error("[Backend] Failed to persist analysis to MongoDB:", saveError.message);
@@ -324,12 +325,85 @@ app.post("/api/analyze/summary", optionalVerifyToken, async (req, res) => {
       analysisId: savedAnalysis ? savedAnalysis._id : null,
       meta: result.meta,
       summary: result.summary,
+      techStack: result.techStack,
     });
   } catch (error) {
     console.error("[Backend] Analysis error:", error.message);
     return res.status(500).json({
       success: false,
       message: error.message || "Failed to analyze repository.",
+    });
+  }
+});
+
+/**
+ * POST /api/analyze/techstack
+ * Feature 2: Analyzes repository tech stack.
+ * If analysisId or url is provided, updates existing MongoDB record or creates one.
+ */
+app.post("/api/analyze/techstack", optionalVerifyToken, async (req, res) => {
+  try {
+    const { url, analysisId } = req.body;
+
+    if (!url || typeof url !== "string") {
+      return res.status(400).json({
+        success: false,
+        message: "A valid GitHub repository URL is required.",
+      });
+    }
+
+    // Check if we already have it in MongoDB with techStack
+    let existing = null;
+    if (analysisId) {
+      existing = await Analysis.findById(analysisId);
+    } else {
+      existing = await Analysis.findOne({ repoUrl: url.trim() }).sort({ createdAt: -1 });
+    }
+
+    if (existing && existing.techStack && existing.techStack.languages && existing.techStack.languages.length > 0) {
+      return res.status(200).json({
+        success: true,
+        message: "Tech stack loaded from saved analysis.",
+        analysisId: existing._id,
+        meta: existing.meta,
+        techStack: existing.techStack,
+      });
+    }
+
+    console.log(`[Backend] Starting Tech Stack analysis for: ${url}`);
+    const result = await analyzeTechStack(url);
+
+    if (existing) {
+      existing.techStack = result.techStack;
+      if (!existing.meta) existing.meta = result.meta;
+      await existing.save();
+    } else {
+      try {
+        existing = await Analysis.create({
+          user: req.user ? req.user.id : null,
+          repoUrl: result.meta.url,
+          repoName: result.meta.repo,
+          owner: result.meta.owner,
+          meta: result.meta,
+          techStack: result.techStack,
+        });
+      } catch (saveErr) {
+        console.error("Save error:", saveErr.message);
+      }
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Tech stack detected successfully!",
+      analysisId: existing ? existing._id : null,
+      meta: result.meta,
+      techStack: result.techStack,
+    });
+  } catch (error) {
+    console.error("[Backend] Tech stack analysis error:", error.message);
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Failed to detect tech stack.",
     });
   }
 });
@@ -438,7 +512,8 @@ app.get("/", (req, res) => {
         users: "GET /api/auth/users",
       },
       aiAnalysis: {
-        summary: "POST /api/analyze/summary (Feature 1)",
+        summary: "POST /api/analyze/summary (Feature 1 & Feature 2)",
+        techstack: "POST /api/analyze/techstack (Feature 2: Tech Stack Detection)",
         history: "GET /api/analyze/history (User saved reports)",
         getById: "GET /api/analyze/:id",
         delete: "DELETE /api/analyze/:id",

@@ -71,7 +71,7 @@ ${(summary.architectureHighlights || []).map((h) => `- ${h}`).join("\n")}
   };
 
   return (
-    <div className="mt-12 w-full max-w-5xl animate-in fade-in slide-in-from-bottom-8 duration-700">
+    <div className="w-full animate-in fade-in slide-in-from-bottom-6 duration-500">
       <div className="rounded-2xl border border-gold-500/30 bg-panel/60 p-6 sm:p-8 shadow-[0_0_50px_-15px_rgba(217,185,90,0.2)] backdrop-blur-xl">
         <div className="flex flex-col gap-4 border-b border-white/10 pb-6 md:flex-row md:items-start md:justify-between">
           <div>

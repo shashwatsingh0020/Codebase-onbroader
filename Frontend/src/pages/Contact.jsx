@@ -15,13 +15,11 @@ export default function Contact() {
   return (
     <main className="mx-auto flex max-w-3xl flex-1 flex-col justify-center px-6 py-12">
       <div className="text-center">
-        <EyebrowBadge>Contact</EyebrowBadge>
+   
         <h1 className="mt-6 font-display text-3xl font-extrabold text-white sm:text-5xl">
           Talk to us
         </h1>
-        <p className="mx-auto mt-4 max-w-lg text-slate-350">
-          Questions, feedback, or a repo that trips up the analyzer? Send it over.
-        </p>
+      
       </div>
       <div className="mt-12 grid gap-8 sm:grid-cols-[1fr_1.3fr]">
         <div className="space-y-6">
