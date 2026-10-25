@@ -61,12 +61,6 @@ export default function Home() {
         <div className="grid items-center gap-12 lg:grid-cols-12 lg:gap-8">
           {/* Left Column: Hero Copy & Quick Input */}
           <div className="flex flex-col items-start text-left lg:col-span-6">
-            {/* Pill Badge */}
-            <div className="inline-flex items-center gap-2 rounded-full border border-blue-500/30 bg-blue-500/10 px-3.5 py-1.5 text-xs font-medium text-blue-300 backdrop-blur-md">
-              <Sparkles size={13} className="text-blue-400" />
-              <span>AI-Powered Codebase Understanding</span>
-            </div>
-
             {/* Headline */}
             <h1 className="mt-6 font-display text-4xl font-extrabold tracking-tight text-white sm:text-5xl lg:text-6xl">
               Understand Any Codebase{" "}
@@ -77,7 +71,7 @@ export default function Home() {
 
             {/* Subtitle */}
             <p className="mt-5 max-w-xl text-base leading-relaxed text-slate-350 sm:text-lg">
-              Turn unfamiliar repositories into clear project summaries, understandable architecture, and actionable insights — powered by AI.
+              Turn unfamiliar repositories into clear project summaries, understandable architecture, and actionable insights.
             </p>
 
             {/* Input / Get Started Form */}
@@ -367,7 +361,7 @@ export default function Home() {
       <section id="features" className="relative mx-auto w-full max-w-6xl px-4 py-20 sm:px-6 lg:px-8">
         <div className="text-center">
           <span className="inline-block rounded-full border border-blue-500/20 bg-blue-500/10 px-3.5 py-1 text-xs font-semibold uppercase tracking-wider text-blue-400">
-            Powerful Features
+             Features
           </span>
           <h2 className="mt-4 font-display text-3xl font-extrabold text-white sm:text-4xl">
             Everything You Need to Understand a Codebase
@@ -432,23 +426,7 @@ export default function Home() {
             <p className="mt-2 text-xs leading-relaxed text-slate-400">
               Ask specific technical questions about any file or flow and receive answers cited from the project files.
             </p>
-          </div>
-
-          {/* Feature 6 (Coming Soon) */}
-          <div className="group relative rounded-2xl border border-white/5 bg-[#0e1322]/80 p-6 transition-all hover:border-blue-500/40 hover:bg-[#11172a]">
-            <div className="flex items-center justify-between">
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-cyan-500/10 text-cyan-400 transition-transform group-hover:scale-110">
-                <ShieldCheck size={20} />
-              </div>
-              <span className="rounded-full border border-purple-500/30 bg-purple-500/15 px-2.5 py-0.5 text-[10px] font-semibold text-purple-300">
-                Coming Soon
-              </span>
-            </div>
-            <h3 className="mt-5 font-display text-base font-bold text-white">Repository Health Report</h3>
-            <p className="mt-2 text-xs leading-relaxed text-slate-400">
-              Check for potential architectural issues, security vulnerabilities, and receive proactive improvement suggestions.
-            </p>
-          </div>
+          </div>    
         </div>
       </section>
 
@@ -720,7 +698,7 @@ export default function Home() {
           <div className="flex flex-col items-center justify-between gap-6 text-center sm:flex-row sm:text-left">
             <div className="flex-1">
               <div className="flex items-center justify-center gap-2 text-xs font-semibold uppercase tracking-wider text-blue-400 sm:justify-start">
-                <Sparkles size={14} />
+                {/* <Sparkles size={14} /> */}
                 <span>Instant Codebase Onboarding</span>
               </div>
               <h2 className="mt-2 font-display text-2xl font-extrabold text-white sm:text-3xl">
