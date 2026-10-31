@@ -140,6 +140,38 @@ async function fetchRootContents(owner, repo, headers) {
 }
 
 /**
+ * Fetch the recursive Git tree from GitHub to discover full directory hierarchy and file list
+ */
+async function fetchRepoTree(owner, repo, defaultBranch = "main", headers = {}) {
+  const branchesToTry = [defaultBranch, "main", "master"];
+
+  for (const branch of branchesToTry) {
+    try {
+      const apiUrl = `https://api.github.com/repos/${owner}/${repo}/git/trees/${branch}?recursive=1`;
+      const res = await fetch(apiUrl, { headers });
+      if (res.ok) {
+        const data = await res.json();
+        if (data && Array.isArray(data.tree)) {
+          return {
+            items: data.tree.map((item) => ({
+              path: item.path,
+              name: item.path.split("/").pop(),
+              type: item.type === "tree" ? "dir" : "file",
+              size: item.size || 0,
+            })),
+            truncated: !!data.truncated,
+          };
+        }
+      }
+    } catch (err) {
+      // Continue trying next branch
+    }
+  }
+
+  return { items: [], truncated: false };
+}
+
+/**
  * Fetch package.json if it exists (for JS/TS apps)
  */
 async function fetchPackageJson(owner, repo, defaultBranch = "main") {
@@ -194,8 +226,8 @@ async function getRepoData(repoUrl, githubToken = null) {
   const data = await response.json();
   const defaultBranch = data.default_branch || "main";
 
-  // 2. Fetch README, package.json, languages, and root contents concurrently
-  const [readme, packageJson, languages, rootContents, requirementsTxt, cargoToml, goMod] = await Promise.all([
+  // 2. Fetch README, package.json, languages, root contents, manifests, and git tree concurrently
+  const [readme, packageJson, languages, rootContents, requirementsTxt, cargoToml, goMod, repoTree] = await Promise.all([
     fetchReadme(owner, repo, defaultBranch),
     fetchPackageJson(owner, repo, defaultBranch),
     fetchLanguages(owner, repo, headers),
@@ -203,7 +235,32 @@ async function getRepoData(repoUrl, githubToken = null) {
     fetchRawFile(owner, repo, "requirements.txt", defaultBranch),
     fetchRawFile(owner, repo, "Cargo.toml", defaultBranch),
     fetchRawFile(owner, repo, "go.mod", defaultBranch),
+    fetchRepoTree(owner, repo, defaultBranch, headers),
   ]);
+
+  // Derive folder and file lists
+  const treeItems = repoTree?.items || [];
+  const foldersSet = new Set();
+  const filesSet = new Set();
+
+  treeItems.forEach((item) => {
+    if (item.type === "dir") {
+      foldersSet.add(item.path);
+    } else {
+      filesSet.add(item.path);
+      // Also register any parent directories inferred from file path
+      const parts = item.path.split("/");
+      for (let i = 1; i < parts.length; i++) {
+        foldersSet.add(parts.slice(0, i).join("/"));
+      }
+    }
+  });
+
+  // Supplement with root contents if tree was empty
+  (rootContents || []).forEach((rc) => {
+    if (rc.type === "dir") foldersSet.add(rc.path);
+    if (rc.type === "file") filesSet.add(rc.path);
+  });
 
   return {
     owner,
@@ -220,6 +277,10 @@ async function getRepoData(repoUrl, githubToken = null) {
     packageJson,
     languages: languages || (data.language ? { [data.language]: 100 } : {}),
     rootContents: rootContents || [],
+    tree: treeItems,
+    folders: Array.from(foldersSet).sort(),
+    files: Array.from(filesSet).sort(),
+    treeTruncated: repoTree?.truncated || false,
     manifests: {
       requirementsTxt,
       cargoToml,
@@ -232,4 +293,5 @@ async function getRepoData(repoUrl, githubToken = null) {
 module.exports = {
   parseGithubUrl,
   getRepoData,
+  fetchRepoTree,
 };

@@ -53,10 +53,6 @@ export default function Home() {
       <div className="pointer-events-none absolute -top-40 left-1/2 -z-10 h-[650px] w-[950px] -translate-x-1/2 rounded-full bg-gradient-to-tr from-blue-600/20 via-indigo-600/15 to-purple-600/20 blur-[130px]" />
       <div className="pointer-events-none absolute top-[1200px] right-[-10%] -z-10 h-[500px] w-[600px] rounded-full bg-blue-600/10 blur-[140px]" />
       <div className="pointer-events-none absolute top-[2200px] left-[-10%] -z-10 h-[600px] w-[600px] rounded-full bg-purple-600/10 blur-[140px]" />
-
-      {/* ========================================================================= */}
-      {/* 1. HERO SECTION                                                           */}
-      {/* ========================================================================= */}
       <section className="relative mx-auto w-full max-w-7xl px-4 pt-12 pb-20 sm:px-6 lg:px-8 lg:pt-16 lg:pb-28">
         <div className="grid items-center gap-12 lg:grid-cols-12 lg:gap-8">
           {/* Left Column: Hero Copy & Quick Input */}
@@ -112,7 +108,11 @@ export default function Home() {
                 Folder Structure
               </span>
               <span className="flex items-center gap-1.5 rounded-lg border border-white/5 bg-white/[0.03] px-2.5 py-1 text-slate-300">
-                <MessageSquare size={13} className="text-purple-400" />
+                <Code2 size={13} className="text-purple-400" />
+                Important Files
+              </span>
+              <span className="flex items-center gap-1.5 rounded-lg border border-white/5 bg-white/[0.03] px-2.5 py-1 text-slate-300">
+                <MessageSquare size={13} className="text-amber-400" />
                 AI Chat
               </span>
             </div>

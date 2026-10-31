@@ -24,6 +24,8 @@ import { useAuth } from "../context/AuthContext.jsx";
 import RepoInputForm from "../components/RepoInputForm.jsx";
 import AnalysisResult from "../components/AnalysisResult.jsx";
 import TechStackResult from "../components/TechStackResult.jsx";
+import FolderStructureResult from "../components/FolderStructureResult.jsx";
+import ImportantFilesResult from "../components/ImportantFilesResult.jsx";
 
 const API_BASE = "http://localhost:5000/api/analyze";
 
@@ -136,6 +138,46 @@ export default function Dashboard() {
           item.repoUrl === (activeAnalysis?.meta?.url || activeAnalysis?.repoUrl)
         ) {
           return { ...item, techStack: newTechStack };
+        }
+        return item;
+      })
+    );
+  };
+
+  // Handle on-demand folder structure update (Phase 4)
+  const handleFolderStructureUpdated = (newFolderStructure) => {
+    setActiveAnalysis((prev) => {
+      if (!prev) return prev;
+      return { ...prev, folderStructure: newFolderStructure };
+    });
+
+    setSavedRepos((prev) =>
+      prev.map((item) => {
+        if (
+          item._id === activeAnalysis?._id ||
+          item.repoUrl === (activeAnalysis?.meta?.url || activeAnalysis?.repoUrl)
+        ) {
+          return { ...item, folderStructure: newFolderStructure };
+        }
+        return item;
+      })
+    );
+  };
+
+  // Handle on-demand important files update (Phase 5)
+  const handleImportantFilesUpdated = (newImportantFiles) => {
+    setActiveAnalysis((prev) => {
+      if (!prev) return prev;
+      return { ...prev, importantFiles: newImportantFiles };
+    });
+
+    setSavedRepos((prev) =>
+      prev.map((item) => {
+        if (
+          item._id === activeAnalysis?._id ||
+          item.repoUrl === (activeAnalysis?.meta?.url || activeAnalysis?.repoUrl)
+        ) {
+          return { ...item, importantFiles: newImportantFiles };
         }
         return item;
       })
@@ -334,40 +376,40 @@ export default function Dashboard() {
                     </span>
                   </button>
 
-                  {/* Feature 3: Folder Structure */}
+                  {/* Feature 3: Folder Structure (Phase 4) */}
                   <button
                     onClick={() => setActiveTab("folder-structure")}
                     className={`flex items-center justify-between rounded-xl px-3 py-2.5 text-xs font-medium transition-all ${
                       activeTab === "folder-structure"
                         ? "bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 font-semibold shadow-sm"
-                        : "text-slate-400 hover:bg-white/5 hover:text-slate-200 border border-transparent"
+                        : "text-slate-300 hover:bg-white/5 hover:text-white border border-transparent"
                     }`}
                   >
                     <div className="flex items-center gap-2.5">
-                      <FolderTree size={16} className={activeTab === "folder-structure" ? "text-emerald-400" : "text-slate-500"} />
+                      <FolderTree size={16} className={activeTab === "folder-structure" ? "text-emerald-400" : "text-slate-400"} />
                       <span>3. Folder Structure</span>
                     </div>
-                    <span className="rounded-full bg-white/5 px-1.5 py-0.5 text-[9px] text-slate-500 font-mono">
-                      Soon
+                    <span className="flex items-center gap-1 rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[9px] font-bold text-emerald-300 border border-emerald-400/30">
+                      Active ✨
                     </span>
                   </button>
 
-                  {/* Feature 4: Important Files */}
+                  {/* Feature 4: Important Files (Phase 5) */}
                   <button
                     onClick={() => setActiveTab("important-files")}
                     className={`flex items-center justify-between rounded-xl px-3 py-2.5 text-xs font-medium transition-all ${
                       activeTab === "important-files"
                         ? "bg-purple-500/15 text-purple-300 border border-purple-500/30 font-semibold shadow-sm"
-                        : "text-slate-400 hover:bg-white/5 hover:text-slate-200 border border-transparent"
+                        : "text-slate-300 hover:bg-white/5 hover:text-white border border-transparent"
                     }`}
                   >
                     <div className="flex items-center gap-2.5">
-                      <Code2 size={16} className={activeTab === "important-files" ? "text-purple-400" : "text-slate-500"} />
+                      <Code2 size={16} className={activeTab === "important-files" ? "text-purple-400" : "text-slate-400"} />
                       <span>4. Important Files</span>
                     </div>
-                    {/* <span className="rounded-full bg-white/5 px-1.5 py-0.5 text-[9px] text-slate-500 font-mono">
-                      Soon
-                    </span> */}
+                    <span className="flex items-center gap-1 rounded-full bg-purple-500/15 px-1.5 py-0.5 text-[9px] font-bold text-purple-300 border border-purple-400/30">
+                      Active ✨
+                    </span>
                   </button>
 
                   {/* Feature 5: AI Codebase Chat */}
@@ -453,55 +495,25 @@ export default function Dashboard() {
                 </div>
               )}
 
-              {/* Feature 3 View (Coming Soon) */}
+              {/* Feature 3 / Phase 4 View: Folder Structure Explanation */}
               {activeTab === "folder-structure" && (
-                <div className="rounded-2xl border border-dashed border-emerald-500/30 bg-panel/60 p-10 text-center backdrop-blur-xl">
-                  <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-400">
-                    <FolderTree size={28} />
-                  </div>
-                  <h3 className="mt-4 font-display text-xl font-bold text-white">
-                    Feature 3: Folder Structure Explanation
-                  </h3>
-                  <p className="mx-auto mt-2 max-w-lg text-xs sm:text-sm text-slate-400 leading-relaxed">
-                    This feature will scan the entire directory tree of <strong className="text-white">{currentFullName}</strong>, identify architectural layers (routes, controllers, models, utils), and explain why each folder exists.
-                  </p>
-                  <div className="mt-6 flex justify-center gap-3">
-                    <button
-                      onClick={() => setActiveTab("summary")}
-                      className="rounded-lg bg-white/10 px-4 py-2 text-xs font-semibold text-white hover:bg-white/20"
-                    >
-                      Back to Summary
-                    </button>
-                    <button
-                      onClick={() => setActiveTab("tech-stack")}
-                      className="rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white hover:bg-blue-500"
-                    >
-                      View Tech Stack
-                    </button>
-                  </div>
+                <div className="w-full">
+                  <FolderStructureResult
+                    data={activeAnalysis}
+                    url={activeAnalysis?.meta?.url || activeAnalysis?.repoUrl}
+                    onFolderStructureUpdated={handleFolderStructureUpdated}
+                  />
                 </div>
               )}
 
-              {/* Feature 4 View (Coming Soon) */}
+              {/* Feature 4 / Phase 5 View: Important Files Identification */}
               {activeTab === "important-files" && (
-                <div className="rounded-2xl border border-dashed border-purple-500/30 bg-panel/60 p-10 text-center backdrop-blur-xl">
-                  <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-purple-500/10 text-purple-400">
-                    <Code2 size={28} />
-                  </div>
-                  <h3 className="mt-4 font-display text-xl font-bold text-white">
-                    Feature 4: Important Files Detection
-                  </h3>
-                  <p className="mx-auto mt-2 max-w-lg text-xs sm:text-sm text-slate-400 leading-relaxed">
-                    Automatically curates the critical entry files, database configurations, and environment templates of <strong className="text-white">{currentFullName}</strong> so onboarding developers know where to start reading code.
-                  </p>
-                  <div className="mt-6 flex justify-center gap-3">
-                    <button
-                      onClick={() => setActiveTab("tech-stack")}
-                      className="rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white hover:bg-blue-500"
-                    >
-                      Explore Tech Stack
-                    </button>
-                  </div>
+                <div className="w-full">
+                  <ImportantFilesResult
+                    data={activeAnalysis}
+                    url={activeAnalysis?.meta?.url || activeAnalysis?.repoUrl}
+                    onImportantFilesUpdated={handleImportantFilesUpdated}
+                  />
                 </div>
               )}
 

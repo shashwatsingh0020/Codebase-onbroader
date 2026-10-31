@@ -66,6 +66,44 @@ const analysisSchema = new mongoose.Schema(
       runtime: String,
       engine: String,
     },
+    // Feature 3 / Phase 4: Folder Structure Explanation
+    folderStructure: {
+      overview: String,
+      totalFolders: Number,
+      engine: String,
+      folders: [
+        {
+          name: String,
+          path: String,
+          category: String,
+          role: String,
+          importance: String,
+          explanation: String,
+          fileCount: Number,
+          keyContents: [String],
+        },
+      ],
+    },
+    // Feature 4 / Phase 5: Important Files Identification
+    importantFiles: {
+      summary: String,
+      totalIdentified: Number,
+      highImportanceCount: Number,
+      mediumImportanceCount: Number,
+      recommendedSequence: [String],
+      engine: String,
+      files: [
+        {
+          name: String,
+          path: String,
+          importance: String,
+          category: String,
+          explanation: String,
+          readingOrder: Number,
+          keyHighlights: [String],
+        },
+      ],
+    },
   },
   {
     timestamps: true,
