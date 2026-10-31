@@ -7,7 +7,14 @@ require("dotenv").config();
 
 // AI Engine and MongoDB Models
 const Analysis = require("./models/Analysis");
-const { analyzeProjectSummary, analyzeTechStack } = require("../AI/index.js");
+const {
+  analyzeProjectSummary,
+  analyzeTechStack,
+  analyzeFolderStructure,
+  analyzeImportantFiles,
+  explainFolderStructure,
+  identifyImportantFiles,
+} = require("../AI/index.js");
 
 // ==============================================================================
 // 1. EXPRESS APP INITIALIZATION & MIDDLEWARES
@@ -27,9 +34,6 @@ app.use(
 );
 app.use(express.json());
 
-// ==============================================================================
-// 2. MONGODB CONNECTION
-// ==============================================================================
 mongoose
   .connect(MONGODB_URI)
   .then(() => {
@@ -39,9 +43,6 @@ mongoose
     console.error("MongoDB connection error:", err.message);
   });
 
-// ==============================================================================
-// 3. USER SCHEMA & MODEL
-// ==============================================================================
 const userSchema = new mongoose.Schema(
   {
     name: {
@@ -69,9 +70,6 @@ const userSchema = new mongoose.Schema(
 
 const User = mongoose.model("User", userSchema);
 
-// ==============================================================================
-// 4. AUTH HELPERS & MIDDLEWARES
-// ==============================================================================
 const generateToken = (user) => {
   return jwt.sign(
     {
@@ -280,15 +278,6 @@ app.get("/api/auth/users", async (req, res) => {
   }
 });
 
-// ==============================================================================
-// 6. AI ANALYSIS ROUTES (FEATURE 1: PROJECT SUMMARY)
-// ==============================================================================
-
-/**
- * POST /api/analyze/summary
- * Analyzes repository and generates Feature 1: Project Summary.
- * Automatically saves the analysis to MongoDB linked to user (if authenticated).
- */
 app.post("/api/analyze/summary", optionalVerifyToken, async (req, res) => {
   try {
     const { url } = req.body;
@@ -314,6 +303,8 @@ app.post("/api/analyze/summary", optionalVerifyToken, async (req, res) => {
         meta: result.meta,
         summary: result.summary,
         techStack: result.techStack,
+        folderStructure: result.folderStructure,
+        importantFiles: result.importantFiles,
       });
     } catch (saveError) {
       console.error("[Backend] Failed to persist analysis to MongoDB:", saveError.message);
@@ -321,11 +312,13 @@ app.post("/api/analyze/summary", optionalVerifyToken, async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: "Project summary generated successfully!",
+      message: "Repository onboarding analysis generated successfully!",
       analysisId: savedAnalysis ? savedAnalysis._id : null,
       meta: result.meta,
       summary: result.summary,
       techStack: result.techStack,
+      folderStructure: result.folderStructure,
+      importantFiles: result.importantFiles,
     });
   } catch (error) {
     console.error("[Backend] Analysis error:", error.message);
@@ -336,11 +329,7 @@ app.post("/api/analyze/summary", optionalVerifyToken, async (req, res) => {
   }
 });
 
-/**
- * POST /api/analyze/techstack
- * Feature 2: Analyzes repository tech stack.
- * If analysisId or url is provided, updates existing MongoDB record or creates one.
- */
+
 app.post("/api/analyze/techstack", optionalVerifyToken, async (req, res) => {
   try {
     const { url, analysisId } = req.body;
@@ -404,6 +393,164 @@ app.post("/api/analyze/techstack", optionalVerifyToken, async (req, res) => {
     return res.status(500).json({
       success: false,
       message: error.message || "Failed to detect tech stack.",
+    });
+  }
+});
+
+
+app.post("/api/analyze/folderstructure", optionalVerifyToken, async (req, res) => {
+  try {
+    const { url, analysisId, folders } = req.body;
+
+    // Check if direct folders array is provided
+    if (Array.isArray(folders) && folders.length > 0) {
+      console.log(`[Backend] Explaining explicit folder structure:`, folders);
+      const folderStructure = await explainFolderStructure(folders);
+      return res.status(200).json({
+        success: true,
+        message: "Folder structure explained successfully!",
+        folderStructure,
+      });
+    }
+
+    if (!url || typeof url !== "string") {
+      return res.status(400).json({
+        success: false,
+        message: "A valid GitHub repository URL or folders array is required.",
+      });
+    }
+
+    // Check if already in MongoDB with folderStructure
+    let existing = null;
+    if (analysisId) {
+      existing = await Analysis.findById(analysisId);
+    } else {
+      existing = await Analysis.findOne({ repoUrl: url.trim() }).sort({ createdAt: -1 });
+    }
+
+    if (existing && existing.folderStructure && existing.folderStructure.folders && existing.folderStructure.folders.length > 0) {
+      return res.status(200).json({
+        success: true,
+        message: "Folder structure loaded from saved analysis.",
+        analysisId: existing._id,
+        meta: existing.meta,
+        folderStructure: existing.folderStructure,
+      });
+    }
+
+    console.log(`[Backend] Starting Folder Structure analysis for: ${url}`);
+    const result = await analyzeFolderStructure(url);
+
+    if (existing) {
+      existing.folderStructure = result.folderStructure;
+      if (!existing.meta) existing.meta = result.meta;
+      await existing.save();
+    } else {
+      try {
+        existing = await Analysis.create({
+          user: req.user ? req.user.id : null,
+          repoUrl: result.meta.url,
+          repoName: result.meta.repo,
+          owner: result.meta.owner,
+          meta: result.meta,
+          folderStructure: result.folderStructure,
+        });
+      } catch (saveErr) {
+        console.error("Save error:", saveErr.message);
+      }
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Folder structure analyzed successfully!",
+      analysisId: existing ? existing._id : null,
+      meta: result.meta,
+      folderStructure: result.folderStructure,
+    });
+  } catch (error) {
+    console.error("[Backend] Folder structure analysis error:", error.message);
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Failed to analyze folder structure.",
+    });
+  }
+});
+
+
+app.post("/api/analyze/importantfiles", optionalVerifyToken, async (req, res) => {
+  try {
+    const { url, analysisId, files } = req.body;
+
+    // Check if direct files array is provided
+    if (Array.isArray(files) && files.length > 0) {
+      console.log(`[Backend] Explaining explicit files list:`, files);
+      const importantFiles = await identifyImportantFiles(files);
+      return res.status(200).json({
+        success: true,
+        message: "Important files identified successfully!",
+        importantFiles,
+      });
+    }
+
+    if (!url || typeof url !== "string") {
+      return res.status(400).json({
+        success: false,
+        message: "A valid GitHub repository URL or files array is required.",
+      });
+    }
+
+    // Check if already in MongoDB with importantFiles
+    let existing = null;
+    if (analysisId) {
+      existing = await Analysis.findById(analysisId);
+    } else {
+      existing = await Analysis.findOne({ repoUrl: url.trim() }).sort({ createdAt: -1 });
+    }
+
+    if (existing && existing.importantFiles && existing.importantFiles.files && existing.importantFiles.files.length > 0) {
+      return res.status(200).json({
+        success: true,
+        message: "Important files loaded from saved analysis.",
+        analysisId: existing._id,
+        meta: existing.meta,
+        importantFiles: existing.importantFiles,
+      });
+    }
+
+    console.log(`[Backend] Starting Important Files analysis for: ${url}`);
+    const result = await analyzeImportantFiles(url);
+
+    if (existing) {
+      existing.importantFiles = result.importantFiles;
+      if (!existing.meta) existing.meta = result.meta;
+      await existing.save();
+    } else {
+      try {
+        existing = await Analysis.create({
+          user: req.user ? req.user.id : null,
+          repoUrl: result.meta.url,
+          repoName: result.meta.repo,
+          owner: result.meta.owner,
+          meta: result.meta,
+          importantFiles: result.importantFiles,
+        });
+      } catch (saveErr) {
+        console.error("Save error:", saveErr.message);
+      }
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Important files analyzed successfully!",
+      analysisId: existing ? existing._id : null,
+      meta: result.meta,
+      importantFiles: result.importantFiles,
+    });
+  } catch (error) {
+    console.error("[Backend] Important files analysis error:", error.message);
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Failed to identify important files.",
     });
   }
 });
@@ -485,9 +632,6 @@ app.delete("/api/analyze/:id", verifyToken, async (req, res) => {
   }
 });
 
-// ==============================================================================
-// 7. ROOT HEALTH & STATUS ENDPOINT
-// ==============================================================================
 app.get("/", (req, res) => {
   const dbState = mongoose.connection.readyState;
   const dbStatusMap = {
@@ -512,8 +656,10 @@ app.get("/", (req, res) => {
         users: "GET /api/auth/users",
       },
       aiAnalysis: {
-        summary: "POST /api/analyze/summary (Feature 1 & Feature 2)",
+        summary: "POST /api/analyze/summary (All Features: Summary, Tech Stack, Folders, Files)",
         techstack: "POST /api/analyze/techstack (Feature 2: Tech Stack Detection)",
+        folderstructure: "POST /api/analyze/folderstructure (Feature 3 / Phase 4: Folder Structure Explanation)",
+        importantfiles: "POST /api/analyze/importantfiles (Feature 4 / Phase 5: Important Files Identification)",
         history: "GET /api/analyze/history (User saved reports)",
         getById: "GET /api/analyze/:id",
         delete: "DELETE /api/analyze/:id",
@@ -536,6 +682,9 @@ if (require.main === module) {
     console.log(` Server running on http://localhost:${PORT}`);
     console.log(` MongoDB URI: ${MONGODB_URI}`);
     console.log(` Feature 1 (Project Summary) Active!`);
+    console.log(` Feature 2 (Tech Stack Detection) Active!`);
+    console.log(` Feature 3 / Phase 4 (Folder Structure) Active!`);
+    console.log(` Feature 4 / Phase 5 (Important Files) Active!`);
     console.log(`=======================================================`);
   });
 }
