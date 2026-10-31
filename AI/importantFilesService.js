@@ -1,6 +1,5 @@
 
 const FILE_IMPORTANCE_CATALOG = [
-  // --- HIGH IMPORTANCE: ENTRY POINTS & ROOTS ---
   {
     pattern: /^(server\.(js|ts|mjs|cjs)|backend\/server\.(js|ts))$/i,
     name: "server.js",
@@ -224,8 +223,6 @@ const FILE_IMPORTANCE_CATALOG = [
 function inspectFileHeuristically(filePath) {
   const normalized = filePath.replace(/\\/g, "/").trim();
   const fileName = normalized.split("/").pop();
-
-  // Try matching against catalog
   for (const entry of FILE_IMPORTANCE_CATALOG) {
     if (entry.pattern.test(normalized) || entry.pattern.test(fileName)) {
       return {
@@ -287,9 +284,6 @@ function inspectFileHeuristically(filePath) {
   };
 }
 
-/**
- * Gemini AI call for Important Files when API key is provided
- */
 async function callGeminiForImportantFiles(repoData, candidateFiles, apiKey) {
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
@@ -364,12 +358,10 @@ async function identifyImportantFiles(repoDataOrFiles, fileList = []) {
     repoData = repoDataOrFiles;
     const allFiles = repoData.files || [];
 
-    // Filter candidate important files from the entire repo tree
     const curated = allFiles.filter((filePath) => {
       const name = filePath.split("/").pop();
       const lowerName = name.toLowerCase();
 
-      // Include root/key entry points
       if (
         lowerName === "server.js" ||
         lowerName === "package.json" ||
@@ -389,7 +381,6 @@ async function identifyImportantFiles(repoDataOrFiles, fileList = []) {
         return true;
       }
 
-      // Include models, routes, controllers
       if (
         filePath.includes("models/") ||
         filePath.includes("routes/") ||
@@ -406,18 +397,12 @@ async function identifyImportantFiles(repoDataOrFiles, fileList = []) {
     candidateFiles = curated.length > 0 ? curated : allFiles.slice(0, 15);
   }
 
-  // Ensure standard core files are represented if none discovered
   if (candidateFiles.length === 0) {
     candidateFiles = ["server.js", "package.json", "App.jsx", "README.md"];
   }
 
-  // Deduplicate
   const uniqueCandidatePaths = Array.from(new Set(candidateFiles));
-
-  // Run heuristic analyzer on all candidates
   let analyzed = uniqueCandidatePaths.map((fPath) => inspectFileHeuristically(fPath));
-
-  // Optional AI enrichment with Gemini
   let aiResult = null;
   const apiKey = process.env.GEMINI_API_KEY;
   if (apiKey && apiKey.trim().length > 5 && repoData) {
@@ -442,8 +427,6 @@ async function identifyImportantFiles(repoDataOrFiles, fileList = []) {
       return file;
     });
   }
-
-  // Sort by reading order, then by importance (High -> Medium -> Low)
   const importanceWeight = { High: 1, Medium: 2, Low: 3 };
   analyzed.sort((a, b) => {
     const orderDiff = (a.readingOrder || 5) - (b.readingOrder || 5);

@@ -1,11 +1,4 @@
-/**
- * AI/techStackService.js
- * Feature 2: Tech Stack Detection Engine
- * Combines GitHub language analytics, manifest parsing (npm, python, go, rust),
- * file inspection, and optional Gemini LLM synthesis.
- */
 
-// Canonical GitHub language colors
 const LANGUAGE_COLORS = {
   JavaScript: "#f1e05a",
   TypeScript: "#3178c6",
@@ -32,7 +25,6 @@ const LANGUAGE_COLORS = {
   Other: "#8b949e",
 };
 
-// Known Technology Signature Definitions
 const TECH_CATALOG = [
 
   {
@@ -102,7 +94,6 @@ const TECH_CATALOG = [
     },
   },
 
-  // --- BACKEND & APIS ---
   {
     name: "Express.js",
     category: "backend",
@@ -174,8 +165,6 @@ const TECH_CATALOG = [
       topics: ["spring", "spring-boot"],
     },
   },
-
-  // --- DATABASES & ORMS ---
   {
     name: "MongoDB / Mongoose",
     category: "database",
@@ -251,7 +240,6 @@ const TECH_CATALOG = [
     },
   },
 
-  // --- STYLING & UI SYSTEMS ---
   {
     name: "Tailwind CSS",
     category: "styling",
@@ -288,7 +276,6 @@ const TECH_CATALOG = [
     },
   },
 
-  // --- STATE MANAGEMENT & NETWORKING ---
   {
     name: "Redux / Redux Toolkit",
     category: "tools",
@@ -322,7 +309,6 @@ const TECH_CATALOG = [
     },
   },
 
-  // --- BUILD TOOLS, DEVOPS & TESTING ---
   {
     name: "Vite",
     category: "devops",
@@ -420,10 +406,6 @@ function processLanguages(languagesObj) {
   return list;
 }
 
-/**
- * Deterministic detection engine that examines package.json, python manifests,
- * file trees, and GitHub topics.
- */
 function detectTechnologies(repoData) {
   const { packageJson, manifests = {}, rootContents = [], topics = [] } = repoData;
 
@@ -446,21 +428,18 @@ function detectTechnologies(repoData) {
   for (const tech of TECH_CATALOG) {
     let hasMatch = false;
 
-    // Check npm dependencies
     if (tech.match.deps) {
       if (tech.match.deps.some((d) => allDependencies.has(d.toLowerCase()))) {
         hasMatch = true;
       }
     }
 
-    // Check files
     if (!hasMatch && tech.match.files) {
       if (tech.match.files.some((f) => rootFilesSet.has(f.toLowerCase()))) {
         hasMatch = true;
       }
     }
 
-    // Check topics
     if (!hasMatch && tech.match.topics) {
       if (tech.match.topics.some((t) => topicsSet.has(t.toLowerCase()))) {
         hasMatch = true;
@@ -486,9 +465,6 @@ function detectTechnologies(repoData) {
   return matched;
 }
 
-/**
- * Infers overall architecture classification based on detected tech
- */
 function inferArchitecture(detectedTech, languages, repoData) {
   const names = new Set(detectedTech.map((t) => t.name));
   const primaryLang = languages[0]?.name || repoData.language || "Unknown";
@@ -532,9 +508,6 @@ function inferArchitecture(detectedTech, languages, repoData) {
   return `${primaryLang} Software Project`;
 }
 
-/**
- * Call Google Gemini API for deep tech stack commentary (if API key is present)
- */
 async function callGeminiForTechStack(repoData, detectedTech, languages, apiKey) {
   try {
     const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
@@ -585,15 +558,11 @@ Respond strictly with valid JSON with this exact format:
   return null;
 }
 
-/**
- * Main Tech Stack Detection entry point
- */
 async function detectTechStack(repoData) {
   const languages = processLanguages(repoData.languages);
   const detectedTech = detectTechnologies(repoData);
   const architecture = inferArchitecture(detectedTech, languages, repoData);
 
-  // Group detected technologies by category
   const categorized = {
     frameworks: detectedTech.filter((t) => t.category === "framework" || t.category === "frontend" || t.category === "backend"),
     databases: detectedTech.filter((t) => t.category === "database"),
@@ -604,7 +573,6 @@ async function detectTechStack(repoData) {
 
   const primaryLang = languages[0]?.name || repoData.language || "JavaScript";
 
-  // Check if Gemini API key exists
   let aiInsights = null;
   const apiKey = process.env.GEMINI_API_KEY;
   if (apiKey && apiKey.trim().length > 5) {

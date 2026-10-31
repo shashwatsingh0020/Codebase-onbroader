@@ -1,7 +1,3 @@
-/**
- * AI/index.js
- * Main entry point for AI Module
- */
 
 const { getRepoData, parseGithubUrl } = require("./githubService");
 const { generateProjectSummary } = require("./summaryService");
@@ -9,13 +5,6 @@ const { detectTechStack } = require("./techStackService");
 const { explainFolderStructure } = require("./folderStructureService");
 const { identifyImportantFiles } = require("./importantFilesService");
 
-/**
- * Executes complete repository onboarding analysis:
- * - Feature 1: Project Summary
- * - Feature 2: Tech Stack Detection
- * - Feature 3 / Phase 4: Folder Structure Explanation
- * - Feature 4 / Phase 5: Important Files Identification
- */
 async function analyzeProjectSummary(repoUrl, githubToken = null) {
   // 1. Fetch GitHub metadata, README, languages, tree, and manifests
   const repoData = await getRepoData(repoUrl, githubToken);
@@ -104,10 +93,6 @@ async function analyzeFolderStructure(repoUrlOrFolders, githubToken = null) {
     folderStructure,
   };
 }
-
-/**
- * Executes Feature 4 / Phase 5 independently: Important Files Identification
- */
 async function analyzeImportantFiles(repoUrlOrFiles, githubToken = null) {
   // If array of file names was passed directly
   if (Array.isArray(repoUrlOrFiles)) {

@@ -1,11 +1,4 @@
-/**
- * AI/summaryService.js
- * Feature 1: Project Summary Generator using Gemini / OpenAI with intelligent fallback.
- */
 
-/**
- * Heuristic summary builder when no AI API key is configured or if the AI API is unavailable.
- */
 function buildHeuristicSummary(repoData) {
   const { fullName, description, readme, language, topics, packageJson } = repoData;
 
@@ -13,11 +6,10 @@ function buildHeuristicSummary(repoData) {
     ? description
     : `${fullName} - A ${language || "software"} repository.`;
 
-  // Parse sections from README
   const cleanReadme = (readme || "")
-    .replace(/!\[.*?\]\(.*?\)/g, "") // remove images
-    .replace(/<[^>]*>/g, "")        // remove html tags
-    .replace(/\[([^\]]+)\]\([^\)]+\)/g, "$1"); // links to text
+    .replace(/!\[.*?\]\(.*?\)/g, "") 
+    .replace(/<[^>]*>/g, "")       
+    .replace(/\[([^\]]+)\]\([^\)]+\)/g, "$1"); 
 
   const paragraphs = cleanReadme
     .split(/\n\s*\n/)
@@ -30,8 +22,6 @@ function buildHeuristicSummary(repoData) {
   const overview = secondPara 
     ? `${firstPara}\n\n${secondPara}`
     : firstPara;
-
-  // Extract key bullet points or infer from topics/packageJson
   const keyObjectives = [];
   if (topics && topics.length > 0) {
     keyObjectives.push(`Designed with a focus on ${topics.slice(0, 4).join(", ")}.`);
@@ -66,11 +56,8 @@ function buildHeuristicSummary(repoData) {
   };
 }
 
-/**
- * Call Google Gemini API
- */
 async function callGemini(repoData, apiKey) {
-  // Try 1.5-flash or 2.0-flash
+
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
   const prompt = `
@@ -140,7 +127,6 @@ You MUST respond strictly with a valid JSON object with EXACTLY this structure (
     throw new Error("Empty response returned from Gemini API.");
   }
 
-  // Clean output from any markdown ```json ... ``` formatting
   const cleanJson = textOutput
     .replace(/^```json\s*/i, "")
     .replace(/^```\s*/i, "")
@@ -152,9 +138,6 @@ You MUST respond strictly with a valid JSON object with EXACTLY this structure (
   return parsed;
 }
 
-/**
- * Call OpenAI API if configured
- */
 async function callOpenAI(repoData, apiKey) {
   const endpoint = "https://api.openai.com/v1/chat/completions";
 
@@ -201,9 +184,6 @@ Respond strictly in JSON with:
   return parsed;
 }
 
-/**
- * Main function: Generates Feature 1 Project Summary
- */
 async function generateProjectSummary(repoData) {
   const geminiKey = process.env.GEMINI_API_KEY;
   const openaiKey = process.env.OPENAI_API_KEY;
@@ -226,11 +206,9 @@ async function generateProjectSummary(repoData) {
     }
   }
 
-  // Graceful fallback to heuristic parser if no keys configured
   console.log(`[AI] No valid API key provided or API unavailable. Using heuristic summary engine.`);
   return buildHeuristicSummary(repoData);
 }
-
 module.exports = {
   generateProjectSummary,
   buildHeuristicSummary,

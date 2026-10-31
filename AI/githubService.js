@@ -1,20 +1,10 @@
-/**
- * AI/githubService.js
- * Ingestion module to extract repository metadata, README, and dependency manifests.
- */
 
-// Helper to extract owner and repo from URL or "owner/repo" string
 function parseGithubUrl(rawUrl) {
   if (!rawUrl || typeof rawUrl !== "string") {
     throw new Error("Invalid GitHub URL provided.");
   }
 
   const cleaned = rawUrl.trim().replace(/\/+$/, "");
-  // Matches:
-  // - https://github.com/owner/repo
-  // - http://github.com/owner/repo
-  // - github.com/owner/repo
-  // - owner/repo
   const match = cleaned.match(/(?:https?:\/\/)?(?:www\.)?github\.com\/([^\/]+)\/([^\/]+)/i) 
     || cleaned.match(/^([a-zA-Z0-9_.-]+)\/([a-zA-Z0-9_.-]+)$/);
 
@@ -28,9 +18,6 @@ function parseGithubUrl(rawUrl) {
   return { owner, repo, fullName: `${owner}/${repo}` };
 }
 
-/**
- * Fetch raw README text from GitHub
- */
 async function fetchReadme(owner, repo, defaultBranch = "main") {
   const branchesToTry = [defaultBranch, "main", "master"];
   const filenamesToTry = ["README.md", "Readme.md", "readme.md", "README", "README.rst"];
@@ -50,12 +37,9 @@ async function fetchReadme(owner, repo, defaultBranch = "main") {
           }
         }
       } catch (err) {
-        // Continue trying next option
       }
     }
   }
-
-  // Fallback: GitHub API readme endpoint
   try {
     const apiUrl = `https://api.github.com/repos/${owner}/${repo}/readme`;
     const res = await fetch(apiUrl, {
@@ -74,9 +58,7 @@ async function fetchReadme(owner, repo, defaultBranch = "main") {
   return "";
 }
 
-/**
- * Fetch raw file from GitHub raw content
- */
+
 async function fetchRawFile(owner, repo, filename, defaultBranch = "main") {
   const branchesToTry = [defaultBranch, "main", "master"];
 
@@ -100,9 +82,6 @@ async function fetchRawFile(owner, repo, filename, defaultBranch = "main") {
   return null;
 }
 
-/**
- * Fetch language byte breakdown from GitHub API
- */
 async function fetchLanguages(owner, repo, headers) {
   try {
     const apiUrl = `https://api.github.com/repos/${owner}/${repo}/languages`;
